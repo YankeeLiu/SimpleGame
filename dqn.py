@@ -7,15 +7,21 @@ from keras.layers.core import Dense, Activation, Flatten
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras.optimizers import Adam
 import testGame as tg
+from collections import deque
+from random import sample
+from copy import deepcopy
+#from tqdm import tqdm
 
 imgRow , imgCol = 100, 100
-imgChannel = 2
+imgChannel = 4
 actionNum = 3
 initDistance = 1
 batchSz = 32
 gamma = 0.99
-Initdifficult = 3
+initDifficult = 3
 randomEpsilon = 0.1
+observe = 3200
+replayMemory = 50000
 
 def getModel():
     model = Sequential()
@@ -39,67 +45,89 @@ def train(model):
     game = tg.gameState()    # 和当前状态相关的数据获取
     buffer = game.createNewGame()
 
-    counter = 0    # 计数器
-    difficult = Initdifficult
+    counter = -1    # 计数器
+    difficult = initDifficult
+
+    flag = False
+    renderCounter = 0
+
+    queue = deque()
+
+    grayImages_t = np.empty((1, imgChannel, imgRow, imgCol))  # 4, 100, 100
+
+    for i in range(4):
+        # Create continue 4 gray image
+        state = game.getNowImage(buffer)
+        game.getGrayImageChannel(state, grayImages_t[0][i])  # 获取当前图像
+        game.updateGame(difficult)
+
+    inputs = np.zeros((batchSz, imgChannel, imgRow, imgCol))
+    targets = np.zeros((batchSz, actionNum))
+
     while(True):
 
-        inputs = np.zeros((batchSz, imgChannel, imgRow, imgCol))  # 32, 2, 80, 80
-        targets = np.zeros((batchSz, actionNum))  # 32, 3
+        counter += 1
+
+        if np.random.random() < randomEpsilon:
+            action_t = np.random.randint(0, 3)
+        else:
+            predict_action = model.predict(grayImages_t)
+            action_t = np.argmax(predict_action)  # reward预测值最大的那一步
+
+        game.moveBoard(action_t)
+        terminated = game.updateGame(difficult)
+
+        state = game.getNowImage(buffer)
+        grayImages_new = np.empty((1, imgChannel, imgRow, imgCol))
+        for i in range(3):
+            grayImages_new[0][i] = deepcopy(grayImages_t[0][i + 1])
+        game.getGrayImageChannel(state, grayImages_new[0][3])  # 追加最新图像
+
+        if terminated:
+            # 如果撞了
+            reward_t = -1
+        else:
+            # 要计算下一步reward
+            reward_t = 0.1 + gamma * np.max(model.predict(grayImages_new))
+
+        if len(queue) > replayMemory:
+            queue.popleft()
+
+        queue.append((grayImages_new, action_t, reward_t)) #image, action, reward
+
+        if counter < observe:
+            continue
+        #============TRAIN============
+
+        miniBatch = sample(queue, batchSz)
 
         for i in range(batchSz):
-            state = game.getNowImage(buffer)
-            game.getTwoImageChannel(state, inputs[i]) # 获取当前图像
-            #print np.sum(inputs[i][1])
-            targets[i] = model.predict(inputs[i].reshape([1, imgChannel, imgRow, imgCol]))    # 网络走一步
-            if np.random.random() < randomEpsilon:
-                action_t = np.random.randint(0, 3)
-            else:
-                action_t = np.argmax(targets[i])    # reward预测值最大的那一步
-            #print targets[i]
-            # 按照网络预测走一步state.
-            game.moveBoard(action_t)
-            terminated = game.updateGame(difficult)
-
-            if terminated:
-                # 如果撞墙了或者走到终点了
-                reward_t = -1
-                targets[i][action_t] = reward_t
-
-            else:
-                # 要计算下一步reward
-                state_t1 = game.getNowImage(buffer)
-                image_t1 = np.zeros([imgChannel, imgRow, imgCol])
-                game.getTwoImageChannel(state_t1, image_t1)
-                image_t1 = image_t1.reshape([1, imgChannel, imgRow, imgCol])
-                targets[i][action_t] = 0.1 + gamma * np.max(model.predict(image_t1))
+            inputs[i] = miniBatch[i][0]
+            action_history = miniBatch[i][1]
+            reward_history = miniBatch[i][2]
+            targets[i] = model.predict(miniBatch[i][0])
+            targets[i][action_history] = reward_history
 
         loss = model.train_on_batch(inputs, targets)
 
-        if counter % 1 == 0:
+        if counter % 10 == 0:
             print "loss = %.4f" % loss
 
-        if counter % 10 == 0:
-            Flag = False
-            while(True):
-                test_state = game.getNowImage(buffer)
-                image = np.zeros([imgChannel, imgRow, imgCol])
-                game.getTwoImageChannel(test_state, image)
-                game.render(buffer, imgRow, imgCol)
-                a = model.predict(image.reshape([1, imgChannel, imgRow, imgCol]))
-                #print a
-                test_action = np.argmax(a)
-                #print test_action
-                game.moveBoard(test_action)
-                Flag = game.updateGame(difficult)
+        if counter % 200 == 0:
+            flag = True
 
-                if Flag :
-                    break
+        if(flag):
+            game.render(buffer, imgRow, imgCol)
+            renderCounter += 1
+            if(renderCounter > 100):
+                flag = False
+                renderCounter = 0
+
 
         if counter % 1000 == 0:
             # 保存一下权值
             model.save_weights("model.h5", overwrite=True)
 
-        counter += 1    # 递增计数器
 
 
 def testRewardMatrix():

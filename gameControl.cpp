@@ -23,9 +23,15 @@ game::~game(){
 
 int game::update(int number){
 
-	for(int x = 0; x < screenW; ++x){
+	int blockSz = 4;
+
+	for(int x = 0; x < screenW - blockSz - 1; ++x){
 		if (rand() % 5000 < number){
-			map[x] = map[x + 1] = map[x + screenW] = map[x + 1 + screenW] = 1;
+			for(int offsetY = 0; offsetY < blockSz; ++offsetY){
+				for(int offsetX = 0; offsetX < blockSz; ++offsetX){
+					map[x + offsetX + offsetY * screenW] = 1;
+				}
+			}
 		}
 		map[x + (screenH - 1) * screenW] = 0;
 	}

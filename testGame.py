@@ -41,15 +41,15 @@ class gameState():
                 # print self.state[i][j]
         return self.state
 
-    def getTwoImageChannel(self, state):
-        channels = np.zeros([NB_CHANNELS, IMAGE_ROW, IMAGE_COL])
+    def getTwoImageChannel(self, state, channels):
         for i in range(IMAGE_ROW):
             for j in range(IMAGE_COL):
                 if state[i][j] == 0xff0000:
                     channels[0][i][j] = 1
+                    channels[1][i][j] = 0.2
                 else:
-                    channels[1][i][j] = -1
-        return channels
+                    channels[0][i][j] = 0.2
+                    channels[1][i][j] = 1
 
 
     def render(self, buffer, w, h):

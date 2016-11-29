@@ -17,24 +17,24 @@ Initdifficult = 4
 
 def getModel():
     model = Sequential()
-    model.add(Convolution2D(32, 3, 3, subsample=(2, 2), init="normal", border_mode='same', input_shape=(imgChannel, imgRow, imgCol)))
+    model.add(Convolution2D(32, 3, 3, subsample=(2, 2), init="uniform", border_mode='same', input_shape=(imgChannel, imgRow, imgCol)))
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init="normal", border_mode='same'))
+    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init="uniform", border_mode='same'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init="normal", border_mode='same'))
+    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init="uniform", border_mode='same'))
     model.add(Activation('relu'))
     model.add(Flatten())
     model.add(Dense(512, init="uniform"))
     model.add(Activation('relu'))
     model.add(Dense(actionNum, init="uniform"))
 
-    adam = Adam(lr=1e-4)
+    adam = Adam(lr=1e-6)
     model.compile(loss='mse', optimizer=adam)
     return model
 
 def train(model):
 
-    game = tg.gameState()    # 和迷宫当前状态相关的数据获取
+    game = tg.gameState()    # 和当前状态相关的数据获取
     buffer = game.createNewGame()
 
     counter = 0    # 计数器
@@ -46,7 +46,7 @@ def train(model):
 
         for i in range(batchSz):
             state = game.getNowImage(buffer)
-            inputs[i] = game.getTwoImageChannel(state) # 获取当前图像
+            game.getTwoImageChannel(state, inputs[i]) # 获取当前图像
             targets[i] = model.predict(inputs[i].reshape([1, imgChannel, imgRow, imgCol]))    # 网络走一步
             action_t = np.argmax(targets[i])    # reward预测值最大的那一步
             #print targets[i]
@@ -56,33 +56,36 @@ def train(model):
 
             if terminated:
                 # 如果撞墙了或者走到终点了
-                reward_t = -1
+                reward_t = -2
                 targets[i][action_t] = reward_t
 
             else:
                 # 要计算下一步reward
                 state_t1 = game.getNowImage(buffer)
-                image_t1 = game.getTwoImageChannel(state_t1)
+                image_t1 = np.zeros([imgChannel, imgRow, imgCol])
+                game.getTwoImageChannel(state_t1, image_t1)
                 image_t1 = image_t1.reshape([1, imgChannel, imgRow, imgCol])
-                targets[i][action_t] = 1.0 + gamma * np.max(model.predict(image_t1))
+                targets[i][action_t] = 0.05 + gamma * np.max(model.predict(image_t1))
                 #print action_t, targets[i]
 
         loss = model.train_on_batch(inputs, targets)
 
-        if counter % 10 == 0:
+        if counter % 1 == 0:
             print "loss = %.4f" % loss
 
-        if counter % 100 == 0:
+        if counter % 10 == 0:
             Flag = False
             while(True):
-
                 test_state = game.getNowImage(buffer)
-                image = game.getTwoImageChannel(test_state)
+                image = np.zeros([imgChannel, imgRow, imgCol])
+                game.getTwoImageChannel(test_state, image)
                 game.render(buffer, imgRow, imgCol)
-                test_action = np.argmax(model.predict(image.reshape([1, imgChannel, imgRow, imgCol])))
+                a = model.predict(image.reshape([1, imgChannel, imgRow, imgCol]))
+                print a
+                test_action = np.argmax(a)
+                print test_action
                 game.moveBoard(test_action)
                 Flag = game.updateGame(difficult)
-                print Flag
 
                 if Flag :
                     break
@@ -90,7 +93,6 @@ def train(model):
         if counter % 1000 == 0:
             # 保存一下权值
             model.save_weights("model.h5", overwrite=True)
-
 
         counter += 1    # 递增计数器
 

@@ -18,9 +18,9 @@ actionNum = 3
 initDistance = 1
 batchSz = 32
 gamma = 0.99
-initDifficult = 3
+initDifficult = 4
 randomEpsilon = 0.1
-observe = 3200
+observe = 320
 replayMemory = 50000
 
 def getModel():
@@ -36,7 +36,7 @@ def getModel():
     model.add(Activation('relu'))
     model.add(Dense(actionNum, init=lambda shape, name: normal(shape, scale=0.01, name=name)))
 
-    adam = Adam(lr=1e-6)
+    adam = Adam(lr=1e-5)
     model.compile(loss='mse', optimizer=adam)
     return model
 
@@ -85,7 +85,7 @@ def train(model):
 
         if terminated:
             # 如果撞了
-            reward_t = -1
+            reward_t = -2
         else:
             # 要计算下一步reward
             reward_t = 0.1 + gamma * np.max(model.predict(grayImages_new))
@@ -113,7 +113,7 @@ def train(model):
         if counter % 10 == 0:
             print "loss = %.4f" % loss
 
-        if counter % 200 == 0:
+        if counter % 300 == 0:
             flag = True
 
         if(flag):

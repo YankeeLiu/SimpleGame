@@ -4,8 +4,8 @@ from ctypes import *
 import numpy as np
 import time
 
-IMAGE_ROW = 80
-IMAGE_COL = 80
+IMAGE_ROW = 100
+IMAGE_COL = 100
 BOARD_WEIGHT = 15
 BOARD_HIGH = 4
 RENDER_SCALE = 4
@@ -46,9 +46,9 @@ class gameState():
             for j in range(IMAGE_COL):
                 if state[i][j] == 0xff0000:
                     channels[0][i][j] = 1
-                    channels[1][i][j] = 0
+                    channels[1][i][j] = -1
                 elif state[i][j] == 0x00ff00:
-                    channels[0][i][j] = 0
+                    channels[0][i][j] = -1
                     channels[1][i][j] = 1
 
 

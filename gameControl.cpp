@@ -23,7 +23,7 @@ game::~game(){
 
 int game::update(int number){
 
-	int blockSz = 4;
+	int blockSz = 5;
 
 	for(int x = 0; x < screenW - blockSz - 1; ++x){
 		if (rand() % 5000 < number){

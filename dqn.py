@@ -2,31 +2,33 @@
 import numpy as np
 import time
 from keras.models import Sequential
+from keras.initializations import normal
 from keras.layers.core import Dense, Activation, Flatten
 from keras.layers.convolutional import Convolution2D, MaxPooling2D
 from keras.optimizers import Adam
 import testGame as tg
 
-imgRow , imgCol = 80, 80
+imgRow , imgCol = 100, 100
 imgChannel = 2
 actionNum = 3
 initDistance = 1
 batchSz = 32
 gamma = 0.99
-Initdifficult = 4
+Initdifficult = 3
+randomEpsilon = 0.1
 
 def getModel():
     model = Sequential()
-    model.add(Convolution2D(32, 3, 3, subsample=(2, 2), init="uniform", border_mode='same', input_shape=(imgChannel, imgRow, imgCol)))
+    model.add(Convolution2D(32, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same', input_shape=(imgChannel, imgRow, imgCol)))
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init="uniform", border_mode='same'))
+    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init="uniform", border_mode='same'))
+    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
     model.add(Activation('relu'))
     model.add(Flatten())
-    model.add(Dense(512, init="uniform"))
+    model.add(Dense(512, init=lambda shape, name: normal(shape, scale=0.01, name=name)))
     model.add(Activation('relu'))
-    model.add(Dense(actionNum, init="uniform"))
+    model.add(Dense(actionNum, init=lambda shape, name: normal(shape, scale=0.01, name=name)))
 
     adam = Adam(lr=1e-6)
     model.compile(loss='mse', optimizer=adam)
@@ -42,14 +44,17 @@ def train(model):
     while(True):
 
         inputs = np.zeros((batchSz, imgChannel, imgRow, imgCol))  # 32, 2, 80, 80
-        targets = np.zeros((inputs.shape[0], actionNum))  # 32, 3
+        targets = np.zeros((batchSz, actionNum))  # 32, 3
 
         for i in range(batchSz):
             state = game.getNowImage(buffer)
             game.getTwoImageChannel(state, inputs[i]) # 获取当前图像
             #print np.sum(inputs[i][1])
             targets[i] = model.predict(inputs[i].reshape([1, imgChannel, imgRow, imgCol]))    # 网络走一步
-            action_t = np.argmax(targets[i])    # reward预测值最大的那一步
+            if np.random.random() < randomEpsilon:
+                action_t = np.random.randint(0, 3)
+            else:
+                action_t = np.argmax(targets[i])    # reward预测值最大的那一步
             #print targets[i]
             # 按照网络预测走一步state.
             game.moveBoard(action_t)
@@ -57,7 +62,7 @@ def train(model):
 
             if terminated:
                 # 如果撞墙了或者走到终点了
-                reward_t = -2
+                reward_t = -1
                 targets[i][action_t] = reward_t
 
             else:
@@ -66,7 +71,7 @@ def train(model):
                 image_t1 = np.zeros([imgChannel, imgRow, imgCol])
                 game.getTwoImageChannel(state_t1, image_t1)
                 image_t1 = image_t1.reshape([1, imgChannel, imgRow, imgCol])
-                targets[i][action_t] = 0.05 + gamma * np.max(model.predict(image_t1))
+                targets[i][action_t] = 0.1 + gamma * np.max(model.predict(image_t1))
 
         loss = model.train_on_batch(inputs, targets)
 

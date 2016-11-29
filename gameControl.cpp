@@ -49,7 +49,7 @@ int game::update(int number){
 }
 
 
-int game::moveBoard(int direction){
+void game::moveBoard(int direction){
 	int step = direction > 0 ? 1 : -1;
 	
 	if (boardX + step >= 0 && boardX + boardW + step < screenW){
@@ -291,11 +291,11 @@ int *getBuffer(int buffer){
 
 int updateGame(int number){
 	if(myGame){
-		myGame->update(number);
+		return myGame->update(number);
 	}
 }
 
-int moveBoard(int key){
+void moveBoard(int key){
 	if(myGame && key){
 		myGame->moveBoard(key == 1 ? -1 : 1);
 	}

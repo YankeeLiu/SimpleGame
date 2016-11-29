@@ -14,7 +14,7 @@ public:
 	void reset();
 	void renderToArray(int *dst, int colorObstacal = 0x00ff00, int colorBoard = 0xff0000);
 	int getScore();
-	int moveBoard(int direction);
+	void moveBoard(int direction);
 	
 private:
 	bool checkCollision();
@@ -94,5 +94,5 @@ int *getBuffer(int buffer);
 
 int updateGame(int number);
 
-int moveBoard(int key);
+void moveBoard(int key);
 };

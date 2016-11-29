@@ -9,10 +9,13 @@ IMAGE_COL = 80
 BOARD_WEIGHT = 15
 BOARD_HIGH = 4
 RENDER_SCALE = 4
+NB_CHANNELS = 2
 
 Objdll = CDLL("./game.so")
 
 class gameState():
+
+    state = np.zeros([IMAGE_ROW, IMAGE_COL])
 
     def __init__(self):
         pass
@@ -24,7 +27,6 @@ class gameState():
         return hRenderBuffer
 
     def getLeftOrRight(self):
-
         lOrR = Objdll.getLeftOrRight()
         return lOrR
 
@@ -33,20 +35,48 @@ class gameState():
 
     def getNowImage(self, buffer):
         Objdll.getNowImage(buffer)
+        for i in range(IMAGE_ROW):
+            for j in range(IMAGE_COL):
+                self.state[i][j] = Objdll.getValue(buffer, i*IMAGE_ROW + j)
+                # print self.state[i][j]
+        return self.state
+
+    def getTwoImageChannel(self, state):
+        channels = np.zeros([NB_CHANNELS, IMAGE_ROW, IMAGE_COL])
+        for i in range(IMAGE_ROW):
+            for j in range(IMAGE_COL):
+                if state[i][j] == 0xff0000:
+                    channels[0][i][j] = 1
+                else:
+                    channels[1][i][j] = -1
+        return channels
+
 
     def render(self, buffer, w, h):
         Objdll.render(buffer, w, h)
 
     def updateGame(self, difficult):
-        Objdll.updateGame(difficult)
-        time.sleep(0.016)
+        terminated = False
+        tmp = Objdll.updateGame(difficult)
+        if tmp == -1:
+            terminated = False
+        else:
+            terminated = True
+    # time.sleep(0.016)
+        return terminated
 
 
-state = gameState()
-buffer = state.createNewGame()
-while(Objdll.handleEvents()):
-    action = state.getLeftOrRight()
-    state.moveBoard(action)
-    state.getNowImage(buffer)
-    state.render(buffer, IMAGE_ROW, IMAGE_COL)
-    state.updateGame(4)
+
+def __main__():
+    state = gameState()
+    buffer = state.createNewGame()
+    while(Objdll.handleEvents()):
+        action = state.getLeftOrRight()
+        state.moveBoard(action)
+        state.getNowImage(buffer)
+        state.render(buffer, IMAGE_ROW, IMAGE_COL)
+        state.updateGame(3)
+
+
+if __name__ == "__main__":
+    __main__()

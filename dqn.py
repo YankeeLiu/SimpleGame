@@ -47,6 +47,7 @@ def train(model):
         for i in range(batchSz):
             state = game.getNowImage(buffer)
             game.getTwoImageChannel(state, inputs[i]) # 获取当前图像
+            #print np.sum(inputs[i][1])
             targets[i] = model.predict(inputs[i].reshape([1, imgChannel, imgRow, imgCol]))    # 网络走一步
             action_t = np.argmax(targets[i])    # reward预测值最大的那一步
             #print targets[i]
@@ -66,7 +67,6 @@ def train(model):
                 game.getTwoImageChannel(state_t1, image_t1)
                 image_t1 = image_t1.reshape([1, imgChannel, imgRow, imgCol])
                 targets[i][action_t] = 0.05 + gamma * np.max(model.predict(image_t1))
-                #print action_t, targets[i]
 
         loss = model.train_on_batch(inputs, targets)
 
@@ -81,9 +81,9 @@ def train(model):
                 game.getTwoImageChannel(test_state, image)
                 game.render(buffer, imgRow, imgCol)
                 a = model.predict(image.reshape([1, imgChannel, imgRow, imgCol]))
-                print a
+                #print a
                 test_action = np.argmax(a)
-                print test_action
+                #print test_action
                 game.moveBoard(test_action)
                 Flag = game.updateGame(difficult)
 

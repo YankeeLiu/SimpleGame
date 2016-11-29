@@ -46,9 +46,9 @@ class gameState():
             for j in range(IMAGE_COL):
                 if state[i][j] == 0xff0000:
                     channels[0][i][j] = 1
-                    channels[1][i][j] = 0.2
-                else:
-                    channels[0][i][j] = 0.2
+                    channels[1][i][j] = 0
+                elif state[i][j] == 0x00ff00:
+                    channels[0][i][j] = 0
                     channels[1][i][j] = 1
 
 

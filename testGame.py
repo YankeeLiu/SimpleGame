@@ -35,7 +35,8 @@ class gameState():
         Objdll.moveBoard(action)
 
 
-    def getGrayImageByBuffer(self, channels):
+    def getGrayImageByBuffer(self):
+        channels = np.empty((IMAGE_ROW, IMAGE_COL))  # 100, 100
         for i in range(IMAGE_ROW):
             for j in range(IMAGE_COL):
                 color = Objdll.getValue(self.hRenderBuffer, i * IMAGE_ROW + j)
@@ -45,6 +46,7 @@ class gameState():
                     channels[i][j] = 0.5
                 else:
                     channels[i][j] = 0
+        return channels
 
 
     def render(self, w, h):
@@ -62,7 +64,7 @@ class gameState():
             terminated = False
         else:
             terminated = True
-        time.sleep(0.016)
+        #time.sleep(0.016)
         return terminated
 
 

@@ -23,37 +23,37 @@ class gameState():
     def createNewGame(self):
         Objdll.initGame(IMAGE_ROW, IMAGE_COL, BOARD_WEIGHT, BOARD_HIGH)
         Objdll.initRenderer(IMAGE_ROW * RENDER_SCALE, IMAGE_COL * RENDER_SCALE, 32, RENDER_SCALE)
-        hRenderBuffer = Objdll.createIntBuffer(IMAGE_ROW * IMAGE_COL)
-        return hRenderBuffer
+        self.hRenderBuffer = Objdll.createIntBuffer(IMAGE_ROW * IMAGE_COL)
+
 
     def getLeftOrRight(self):
         lOrR = Objdll.getLeftOrRight()
         return lOrR
 
+
     def moveBoard(self, action):
         Objdll.moveBoard(action)
 
-    def getNowImage(self, buffer):
-        Objdll.getNowImage(buffer)
-        for i in range(IMAGE_ROW):
-            for j in range(IMAGE_COL):
-                self.state[i][j] = Objdll.getValue(buffer, i*IMAGE_ROW + j)
-                # print self.state[i][j]
-        return self.state
 
-    def getGrayImageChannel(self, state, channels):
+    def getGrayImageByBuffer(self, channels):
         for i in range(IMAGE_ROW):
             for j in range(IMAGE_COL):
-                if state[i][j] == 0xff0000:
-                    channels[i][j] = 1
-                elif state[i][j] == 0x00ff00:
+                color = Objdll.getValue(self.hRenderBuffer, i * IMAGE_ROW + j)
+                if color == 0xff0000:
+                    channels[i][j] = -0.5
+                elif color == 0x00ff00:
                     channels[i][j] = 0.5
                 else:
                     channels[i][j] = 0
 
 
-    def render(self, buffer, w, h):
-        Objdll.render(buffer, w, h)
+    def render(self, w, h):
+        Objdll.render(self.hRenderBuffer, w, h)
+
+
+    def getNowImage(self):
+        Objdll.getNowImage(self.hRenderBuffer)
+
 
     def updateGame(self, difficult):
         terminated = False
@@ -62,7 +62,7 @@ class gameState():
             terminated = False
         else:
             terminated = True
-    # time.sleep(0.016)
+        time.sleep(0.016)
         return terminated
 
 
@@ -73,8 +73,8 @@ def __main__():
     while(Objdll.handleEvents()):
         action = state.getLeftOrRight()
         state.moveBoard(action)
-        state.getNowImage(buffer)
-        state.render(buffer, IMAGE_ROW, IMAGE_COL)
+        state.getNowImage()
+        state.render(IMAGE_ROW, IMAGE_COL)
         state.updateGame(3)
 
 

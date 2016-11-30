@@ -51,7 +51,7 @@ class imgQueue:
         self.__queue.append(img)
 
     def addInfo(self, info):
-        if len(self.__info) - imgChannel >= replayMemory:
+        if len(self.__info) >= replayMemory - imgChannel:
            self.__info.popleft()
         self.__info.append(info)
 

@@ -74,7 +74,7 @@ class imgQueue:
 
 def train(model):
 
-    #model.load_weights("model.h5")
+    model.load_weights("model.h5")
 
     game = tg.gameState()    # 和当前状态相关的数据获取
     game.createNewGame()
@@ -140,7 +140,9 @@ def train(model):
         loss = model.train_on_batch(inputs, targets)
 
         if counter % 10 == 0:
-            print "loss = %.4f" % loss
+            print counter,
+            print "loss = %.4f" % loss,
+            print model.predict(inputs[0].reshape((1, imgChannel, imgRow, imgCol)))
 
         if counter % 1000 == 0:
             # 保存一下权值

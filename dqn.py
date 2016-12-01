@@ -82,9 +82,12 @@ def train(model):
     counter = -1    # 计数器
     difficult = initDifficult
 
-    randomEpsilon = 0.0
+    randomEpsilon = 0.1
+    delayEpsilon = 5
 
     queueImg = imgQueue()
+
+    action_t = 0
 
     for i in range(imgChannel):
         # Create continual 4 gray image
@@ -99,12 +102,17 @@ def train(model):
 
         counter += 1
 
-        if np.random.random() < randomEpsilon:
+        if np.random.random() < randomEpsilon and delayEpsilon == 0:
             action_t = np.random.randint(0, 3)
+            delayEpsilon = 5
+        elif delayEpsilon > 0:
+            delayEpsilon -= 1
         else:
             grayImages_t = queueImg.getChannels()
             predict_action = model.predict(grayImages_t)
             action_t = np.argmax(predict_action)  # reward预测值最大的那一步
+
+        randomEpsilon *= 0.999997
 
         game.moveBoard(action_t)
         terminated = game.updateGame(difficult)

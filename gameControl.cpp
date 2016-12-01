@@ -12,6 +12,8 @@ game::game(int i_w, int i_h, int i_boardW, int i_boardH) : screenW(i_w), screenH
 	
 	map = new unsigned char[i_w * i_h];
 	
+	memset(map, 0, sizeof(unsigned char) * screenW * screenH);
+
 	reset();
 }
 

@@ -16,7 +16,7 @@ imgRow, imgCol = 100, 100
 imgChannel = 4
 actionNum = 3
 initDistance = 1
-batchSz = 64
+batchSz = 32
 gamma = 0.99
 initDifficult = 4
 observe = 3200
@@ -28,8 +28,8 @@ def getModel():
     model.add(Activation('relu'))
     model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
     model.add(Activation('relu'))
-    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
-    model.add(Activation('relu'))
+    #model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
+    #model.add(Activation('relu'))
     model.add(Flatten())
     model.add(Dense(512, init=lambda shape, name: normal(shape, scale=0.01, name=name)))
     model.add(Activation('relu'))
@@ -74,16 +74,13 @@ class imgQueue:
 
 def train(model):
 
-    model.load_weights("model.h5")
+    #model.load_weights("model.h5")
 
     game = tg.gameState()    # 和当前状态相关的数据获取
     game.createNewGame()
 
     counter = -1    # 计数器
     difficult = initDifficult
-
-    flag = False
-    renderCounter = 0
 
     randomEpsilon = 0.0
 
@@ -125,6 +122,8 @@ def train(model):
 
         queueImg.addInfo((action_t, reward_t))
 
+        game.render(imgRow, imgCol)
+
         if counter < observe:
             continue
         #============TRAIN============
@@ -143,22 +142,9 @@ def train(model):
         if counter % 10 == 0:
             print "loss = %.4f" % loss
 
-        if counter % 300 == 0:
-            flag = True
-
-        if(flag):
-            game.render(imgRow, imgCol)
-            # renderCounter += 1
-            # if(renderCounter > 100):
-            #     flag = False
-            #     renderCounter = 0
-
-
         if counter % 1000 == 0:
             # 保存一下权值
             model.save_weights("model.h5", overwrite=True)
-
-        randomEpsilon *= 0.99998
 
 
 def __main__():

@@ -16,10 +16,9 @@ imgRow, imgCol = 100, 100
 imgChannel = 4
 actionNum = 3
 initDistance = 1
-batchSz = 32
+batchSz = 64
 gamma = 0.99
 initDifficult = 4
-randomEpsilon = 0.1
 observe = 3200
 replayMemory = 50000
 
@@ -75,6 +74,8 @@ class imgQueue:
 
 def train(model):
 
+    model.load_weights("model.h5")
+
     game = tg.gameState()    # 和当前状态相关的数据获取
     game.createNewGame()
 
@@ -83,6 +84,8 @@ def train(model):
 
     flag = False
     renderCounter = 0
+
+    randomEpsilon = 0.0
 
     queueImg = imgQueue()
 
@@ -145,15 +148,17 @@ def train(model):
 
         if(flag):
             game.render(imgRow, imgCol)
-            renderCounter += 1
-            if(renderCounter > 100):
-                flag = False
-                renderCounter = 0
+            # renderCounter += 1
+            # if(renderCounter > 100):
+            #     flag = False
+            #     renderCounter = 0
 
 
         if counter % 1000 == 0:
             # 保存一下权值
             model.save_weights("model.h5", overwrite=True)
+
+        randomEpsilon *= 0.99998
 
 
 def __main__():

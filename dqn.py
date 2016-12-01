@@ -16,20 +16,20 @@ imgRow, imgCol = 100, 100
 imgChannel = 4
 actionNum = 3
 initDistance = 1
-batchSz = 32
+batchSz = 64
 gamma = 0.99
 initDifficult = 4
 randomEpsilon = 0.1
 observe = 3200
-replayMemory = 50000
+replayMemory = 20000
 
 def getModel():
     model = Sequential()
     model.add(Convolution2D(32, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same', input_shape=(imgChannel, imgRow, imgCol)))
     model.add(Activation('relu'))
     model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
-    #model.add(Activation('relu'))
-    #model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
+    model.add(Activation('relu'))
+    model.add(Convolution2D(64, 3, 3, subsample=(2, 2), init=lambda shape, name: normal(shape, scale=0.01, name=name), border_mode='same'))
     model.add(Activation('relu'))
     model.add(Flatten())
     model.add(Dense(512, init=lambda shape, name: normal(shape, scale=0.01, name=name)))
@@ -37,7 +37,7 @@ def getModel():
     model.add(Dense(actionNum, init=lambda shape, name: normal(shape, scale=0.01, name=name)))
 
     adam = Adam(lr=1e-5)
-    model.compile(loss='categorical_crossentropy', optimizer=adam)
+    model.compile(loss='mse', optimizer=adam)
     return model
 
 class imgQueue:

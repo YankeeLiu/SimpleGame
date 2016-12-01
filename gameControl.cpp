@@ -48,6 +48,7 @@ int game::update(int number){
 	
 	if(checkCollision()){
 		reset();
+		score = 1;
 		return score;
 	}
 	
@@ -73,7 +74,7 @@ void game::reset(){
 	boardX = (screenW - boardW) / 2;
 	boardY = (screenH - boardH) / 8 * 7;
 	score = 0;
-	memset(map, 0, sizeof(unsigned char) * screenW * screenH);
+	memset(map + screenH / 2 * screenW, 0, sizeof(unsigned char) * screenW * screenH / 2);
 }
 
 

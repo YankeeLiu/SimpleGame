@@ -9,18 +9,18 @@ from keras.optimizers import Adam
 import testGame as tg
 from collections import deque
 from random import sample
-
+#from copy import deepcopy
+#from tqdm import tqdm
 
 imgRow, imgCol = 100, 100
 imgChannel = 4
 actionNum = 3
-batchSz = 128
+initDistance = 1
+batchSz = 32
 gamma = 0.99
 initDifficult = 3
-observe = 3200
-replayMemory = 20000
-replayFactor = 1.5
-
+observe = 32000000
+replayMemory = 50000
 
 def getModel():
     model = Sequential()
@@ -68,105 +68,88 @@ class imgQueue:
     def getInfo(self, position=-1):
         return self.__info[position]
 
-    def resetDeque(self):
-        self.__queue.clear()
-        self.__info.clear()
-
     def __len__(self):
         return len(self.__queue) - imgChannel + 1
 
 
 def train(model):
 
-    # model.load_weights("model.h5")
+    model.load_weights("model.h5")
 
     game = tg.gameState()    # 和当前状态相关的数据获取
     game.createNewGame()
 
-    randomEpsilon = 0.15
+    counter = -1    # 计数器
     difficult = initDifficult
 
-    cycling = -1
-    delayEpsilon = 5
-    action_t = 0
+    randomEpsilon = 0.0
+
     queueImg = imgQueue()
 
+    for i in range(imgChannel):
+        # Create continual 4 gray image
+        game.getNowImage()
+        queueImg.append(game.getGrayImageByBuffer())  # 获取当前图像
+        game.updateGame(difficult)
+
+    inputs = np.zeros((batchSz, imgChannel, imgRow, imgCol))
+    targets = np.zeros((batchSz, actionNum))
+
     while(True):
-        cycling += 1
-        counter = 0  # 计数器
-        queueImg.resetDeque()
-        randomEpsilon -= 0.05
 
-        for i in range(imgChannel):
-            # Create continual 4 gray image
-            game.getNowImage()
-            queueImg.append(game.getGrayImageByBuffer())  # 获取当前图像
-            game.updateGame(difficult)
+        counter += 1
 
-        inputs = np.zeros((batchSz, imgChannel, imgRow, imgCol))
-        targets = np.zeros((batchSz, actionNum))
+        if np.random.random() < randomEpsilon:
+            action_t = np.random.randint(0, 3)
+        else:
+            grayImages_t = queueImg.getChannels()
+            predict_action = model.predict(grayImages_t)
+            action_t = np.argmax(predict_action)  # reward预测值最大的那一步
 
-        while counter < replayMemory * replayFactor:
-            counter += 1
+        game.moveBoard(action_t)
+        terminated = game.updateGame(difficult)
+        game.getNowImage()
 
-            #
-            if np.random.random() < randomEpsilon and delayEpsilon == 0:
-                action_t = np.random.randint(0, 3)
-                delayEpsilon = 5
-            elif delayEpsilon > 0:
-                delayEpsilon -= 1
-            else:
-                grayImages_t = queueImg.getChannels()
-                predict_action = model.predict(grayImages_t)
-                action_t = np.argmax(predict_action)  # reward预测值最大的那一步
-            randomEpsilon *= 0.999997
+        queueImg.append(game.getGrayImageByBuffer())  # 追加最新图像
 
-            game.moveBoard(action_t)
-            terminated = game.updateGame(difficult)
-            game.getNowImage()
+        if terminated:
+            # 如果撞了
+            reward_t = -1
+        else:
+            # 要计算下一步reward
+            grayImages_t = queueImg.getChannels()
+            reward_t = 0.01 + gamma * np.max(model.predict(grayImages_t))
 
-            queueImg.append(game.getGrayImageByBuffer())  # 追加最新图像
+        queueImg.addInfo((action_t, reward_t))
 
-            if terminated:
-                # 如果撞了
-                reward_t = -1
-            else:
-                # 要计算下一步reward
-                grayImages_t = queueImg.getChannels()
-                reward_t = 0.05 + gamma * np.max(model.predict(grayImages_t))
+        game.render(imgRow, imgCol)
 
-            queueImg.addInfo((action_t, reward_t))
+        if counter < observe:
+            continue
+        #============TRAIN============
 
-            game.render(imgRow, imgCol)
+        for i in range(batchSz):
+            choise = np.random.randint(0, len(queueImg) - 1)
+            inputs[i] = queueImg.getChannels(choise)
+            info = queueImg.getInfo(choise)
+            action_history = info[0]
+            reward_history = info[1]
+            targets[i] = model.predict(inputs[i].reshape((1, imgChannel, imgRow, imgCol)))
+            targets[i][action_history] = reward_history
 
-            if counter < observe:
-                continue
-            #============TRAIN============
+        loss = model.train_on_batch(inputs, targets)
 
-            for i in range(batchSz):
-                choise = np.random.randint(0, len(queueImg) - 1)
-                inputs[i] = queueImg.getChannels(choise)
-                info = queueImg.getInfo(choise)
-                action_history = info[0]
-                reward_history = info[1]
-                targets[i] = model.predict(inputs[i].reshape((1, imgChannel, imgRow, imgCol)))
-                targets[i][action_history] = reward_history
+        if counter % 10 == 0:
+            print "loss = %.4f" % loss
 
-            loss = model.train_on_batch(inputs, targets)
+        if counter % 1000 == 0:
+            # 保存一下权值
+            model.save_weights("model.h5", overwrite=True)
 
-            if counter % 10 == 0:
-                print cycling, counter,
-                print "loss = %.4f" % loss,
-                print model.predict(inputs[0].reshape((1, imgChannel, imgRow, imgCol)))
-
-            if counter % 1000 == 0:
-                # 保存一下权值
-                model.save_weights("model.h5", overwrite=True)
 
 def __main__():
     model = getModel()
     train(model)
-    # testRewardMatrix()
 
 
 if __name__ == "__main__":
